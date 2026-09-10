@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+node_modules/
+dist/
+coverage/
+
+storage/uploads/**
+storage/generated/**
+!storage/uploads/.gitkeep
+!storage/uploads/orders/.gitkeep
+!storage/generated/.gitkeep
+!storage/generated/invoices/.gitkeep
+
+*.log
+.DS_Store
+Thumbs.db
+
+# Local spreadsheet samples / address books at repo root
+/*.xlsx
+/*.xls

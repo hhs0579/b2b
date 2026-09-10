@@ -1,0 +1,21 @@
+{
+  "file": "invoice_MASTER.xlsx",
+  "sha256": "306a489c061b1f29ad1e4f16678ed63ebc6847ca664b8d9688d5f4ce79a6b224",
+  "bytes": 18050,
+  "sheetName": "2021-12-28",
+  "printArea": "'2021-12-28'!$A$1:$O$19",
+  "mergeCount": 66,
+  "image1JpegSha256": "5ceb78cd86c20717d40410ea72f8b84b8806d165d1ab9adc26437e873e4d3128",
+  "frozenPartSha256": {
+    "xl/styles.xml": "e7906336251ea218f5dfe18ab07be1a5819120704d192ed8262c8871776758f2",
+    "xl/theme/theme1.xml": "3eaa3e4e13dbc83fe3423d4fc08983871ca163fddb6b285320a8e76de5b09429",
+    "xl/drawings/drawing1.xml": "d99d007887d7ed6cfacc0ad66745d68806f41bd596564ba2d990cb5b99f3b48d",
+    "xl/drawings/_rels/drawing1.xml.rels": "551874bae68eb9dcecb1875260e298e5644e8cfa6a4729e3ed687d419fdf5557",
+    "xl/media/image1.jpeg": "5ceb78cd86c20717d40410ea72f8b84b8806d165d1ab9adc26437e873e4d3128",
+    "xl/workbook.xml": "d7abed03f2f795c504435057c24671940b0071ec6ce361d8c38588bc5b8d6e36",
+    "xl/worksheets/_rels/sheet1.xml.rels": "046f319d2b01bf9529da901ae33cb1cf8c7c7d06395167875fa0c4add6bf34c3"
+  },
+  "createdBy": "openxml-cell-clear",
+  "sourceFile": "날짜_거래처명_거래명세서.xlsx",
+  "sourceSha256": "7b17b55958c951fc1d8eda528d733d81a1f4e3a219a914b4e40504338fe9c330"
+}

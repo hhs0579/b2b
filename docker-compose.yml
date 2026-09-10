@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: b2b-postgres
+    environment:
+      POSTGRES_DB: b2b
+      POSTGRES_USER: b2b
+      POSTGRES_PASSWORD: b2b
+    ports:
+      - "5432:5432"
+    volumes:
+      - b2b_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U b2b -d b2b"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  b2b_pgdata:

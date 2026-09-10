@@ -1,0 +1,489 @@
+:root {
+  color: #1a1a1a;
+  background: #f4f5f7;
+  font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #d9dde3;
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.nav-label {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.nav a {
+  color: #333;
+  text-decoration: none;
+}
+
+.nav a.router-link-active {
+  font-weight: 700;
+}
+
+.app-main {
+  padding: 24px;
+}
+
+.page {
+  max-width: 760px;
+}
+
+.page.wide {
+  max-width: 1280px;
+}
+
+.page.full {
+  max-width: none;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 0 0 24px;
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid #d9dde3;
+  padding: 16px;
+}
+
+.kpi-card .label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.kpi-card .value {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.toolbar input,
+.toolbar select,
+.edit-form input,
+.edit-form select,
+.edit-form textarea {
+  padding: 6px 8px;
+  border: 1px solid #c5cad3;
+  background: #fff;
+}
+
+.edit-form {
+  margin: 0 0 16px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #d9dde3;
+}
+
+.edit-form h2,
+.edit-form h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-grid label,
+.form-grid .checkbox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.form-grid .checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.option-list {
+  margin-top: 16px;
+}
+
+.option-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.option-list-header h3 {
+  margin: 0;
+}
+
+.option-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #d9dde3;
+  background: #fafbfc;
+}
+
+.option-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 10px;
+  border: 1px solid #d9dde3;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table th {
+  background: #f7f8fa;
+  font-weight: 600;
+}
+
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.row-actions button {
+  margin-right: 4px;
+}
+
+.notice {
+  margin: 12px 0 0;
+  color: #92400e;
+}
+
+.history-block {
+  margin-top: 16px;
+}
+
+.pager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.price-input {
+  width: 96px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid #c5cad3;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.btn-danger {
+  color: #b42318;
+  border-color: #f5c2c0;
+  background: #fff7f6;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.status-table th,
+.status-table td {
+  padding: 10px 12px;
+  border: 1px solid #d9dde3;
+  text-align: left;
+}
+
+.status-table th {
+  width: 180px;
+  background: #f7f8fa;
+  font-weight: 600;
+}
+
+.status {
+  font-weight: 700;
+}
+
+.status.ok {
+  color: #0b7a32;
+}
+
+.status.fail {
+  color: #b42318;
+}
+
+.status.pending {
+  color: #5c6370;
+}
+
+.error {
+  color: #b42318;
+}
+
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 0 0 16px;
+  list-style: none;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.wizard-steps .active {
+  color: #111;
+  font-weight: 700;
+}
+
+.summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0 16px;
+  font-size: 13px;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.mapping-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.raw-preview {
+  font-size: 12px;
+}
+
+.header-row {
+  background: #eef3ff;
+  font-weight: 600;
+}
+
+.data-start-row {
+  background: #f3fbf6;
+}
+
+.header-preview {
+  font-size: 12px;
+  margin: 12px 0 16px;
+}
+
+.suggest-note {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 8px 0 12px;
+}
+
+.row-unmatched {
+  background: #fff1f0;
+}
+
+.row-invalid {
+  background: #fff7e6;
+}
+
+.qty-cell {
+  min-width: 140px;
+}
+
+.qty-cell input {
+  width: 88px;
+}
+
+.qty-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.qty-hint.manual {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.qty-hint.needed {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.qty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.raw-json {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #d9dde3;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.banner-error {
+  margin: 12px 0;
+  padding: 12px;
+  background: #fff1f0;
+  color: #b42318;
+  border: 1px solid #f5c2c0;
+}
+
+.note-preview {
+  margin: 0 0 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #d9dde3;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.shipping-notes {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.invoice-memo {
+  margin: 0 0 24px;
+}
+
+.banner-warn {
+  margin: 12px 0;
+  padding: 12px;
+  background: #fff7e6;
+  color: #92400e;
+  border: 1px solid #f5d78c;
+}
+
+.notice-ok {
+  color: #0b7a32;
+}
+
+.margin-neg {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.shipping-select {
+  min-width: 120px;
+}
+
+.num-input {
+  width: 88px;
+}
+
+.note-input {
+  min-width: 140px;
+  width: 100%;
+}
+
+.split-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+}
