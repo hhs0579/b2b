@@ -39,10 +39,10 @@ export async function partSha256(zip, partName) {
   return sha256(bytes);
 }
 
-export async function frozenPartHashes(buffer) {
+export async function frozenPartHashes(buffer, parts = FROZEN_PARTS) {
   const zip = await loadOpenXmlZip(buffer);
   const hashes = {};
-  for (const part of FROZEN_PARTS) {
+  for (const part of parts) {
     hashes[part] = await partSha256(zip, part);
   }
   return hashes;
@@ -226,7 +226,9 @@ export function parseRelationships(relsXml) {
   }));
 }
 
-export async function inspectInvoiceWorkbook(buffer) {
+export async function inspectInvoiceWorkbook(buffer, options = {}) {
+  const stampMediaPart = options.stampMediaPart || STAMP_MEDIA_PART;
+  const frozenParts = options.frozenParts || FROZEN_PARTS;
   const zip = await loadOpenXmlZip(buffer);
   const names = Object.keys(zip.files)
     .filter((name) => !zip.files[name].dir)
@@ -237,7 +239,15 @@ export async function inspectInvoiceWorkbook(buffer) {
   const drawingXml = await readZipText(zip, STAMP_DRAWING_PART);
   const drawingRelsXml = await readZipText(zip, STAMP_DRAWING_RELS_PART);
   const sheetRelsXml = await readZipText(zip, "xl/worksheets/_rels/sheet1.xml.rels");
-  const media = await readZipBuffer(zip, STAMP_MEDIA_PART);
+  const media = await readZipBuffer(zip, stampMediaPart);
+  const mediaFiles = {};
+  for (const name of names.filter((part) => part.startsWith("xl/media/"))) {
+    const bytes = await readZipBuffer(zip, name);
+    mediaFiles[name] = {
+      sha256: bytes ? sha256(bytes) : null,
+      bytes: bytes ? bytes.length : 0,
+    };
+  }
   const sharedStrings = parseSharedStrings(sstXml);
   const workbook = parseWorkbookMeta(workbookXml);
   const cells = parseSheetCells(sheetXml, sharedStrings);
@@ -268,12 +278,13 @@ export async function inspectInvoiceWorkbook(buffer) {
     drawingRels: drawingRelsXml ? parseRelationships(drawingRelsXml) : [],
     sheetRels: sheetRelsXml ? parseRelationships(sheetRelsXml) : [],
     media: {
-      path: STAMP_MEDIA_PART,
+      path: stampMediaPart,
       exists: Boolean(media),
       sha256: media ? sha256(media) : null,
       bytes: media ? media.length : 0,
     },
-    partHashes: await frozenPartHashes(buffer),
+    mediaFiles,
+    partHashes: await frozenPartHashes(buffer, frozenParts),
     fileSha256: sha256(buffer),
   };
 }

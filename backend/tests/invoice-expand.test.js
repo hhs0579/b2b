@@ -13,6 +13,7 @@ import { inspectInvoiceWorkbook } from "../src/domain/invoice-openxml.js";
 import { STAMP_IMAGE_SHA256, invoiceSheetLayout } from "../src/domain/invoice-template-map.js";
 import { expectedItemMerges } from "../src/domain/invoice-openxml-expand.js";
 import { getMasterPath } from "../src/domain/invoice-master.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P13${Date.now()}`;
 const created = {
@@ -119,7 +120,7 @@ async function makeInvoice(port, { clientId, supplierId, count }) {
   });
   assert.equal(confirmed.status, 200, JSON.stringify(confirmed.json));
   await pool.query("DELETE FROM settlements WHERE order_id = $1", [draft.json.data.id]);
-  const generated = await api(port, "POST", `/api/orders/${draft.json.data.id}/invoices`);
+  const generated = await api(port, "POST", `/api/orders/${draft.json.data.id}/invoices`, await esserInvoiceBody(port));
   assert.equal(generated.status, 201, JSON.stringify(generated.json));
   if (generated.json.data.document.stored_file_name) {
     created.invoiceFiles.push(generated.json.data.document.stored_file_name);

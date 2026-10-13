@@ -12,6 +12,7 @@ router.delete("/:id", ordersController.remove);
 router.get("/:id/preview", ordersController.preview);
 router.patch("/:id/settings", ordersController.updateSettings);
 router.patch("/:id/invoice-memo", ordersController.updateInvoiceMemo);
+router.patch("/:id/invoice-supplier", ordersController.updateInvoiceSupplier);
 router.post("/:id/confirm", ordersController.confirm);
 router.get("/:id", ordersController.detail);
 router.patch("/:id/settlement", settlementsController.update);

@@ -16,6 +16,7 @@ import { getMasterPath, readMasterManifest } from "../src/domain/invoice-master.
 import { generateInvoice } from "../src/modules/invoices/invoices.service.js";
 import { excelSerialFromIsoDate } from "../src/domain/dates.js";
 import { invoiceDownloadFileName } from "../src/domain/invoice-generate.js";
+import { esserInvoiceBody, esserSupplierId } from "./helpers/invoice-supplier.js";
 
 const prefix = `P6${Date.now()}`;
 const created = {
@@ -30,9 +31,13 @@ const created = {
 
 const masterBefore = sha256(fs.readFileSync(getMasterPath()));
 
-test("invoice download file name is YYMMDD_매출처명_거래명세서", () => {
-  assert.equal(invoiceDownloadFileName("2026-09-08", "에쎄르", 1), "260908_에쎄르_거래명세서.xlsx");
-  assert.equal(invoiceDownloadFileName("2026-09-08", "에쎄르", 2), "260908_에쎄르_거래명세서_v2.xlsx");
+test("invoice download file name is YYMMDD_매출처_거래명세서_공급자", () => {
+  assert.equal(invoiceDownloadFileName("2026-09-08", "에쎄르", 1, "에쎄르"), "260908_에쎄르_거래명세서_에쎄르.xlsx");
+  assert.equal(invoiceDownloadFileName("2026-09-08", "에쎄르", 2, "에쎄르"), "260908_에쎄르_거래명세서_에쎄르_v2.xlsx");
+  assert.equal(
+    invoiceDownloadFileName("2026-09-11", "제이와이컴퍼니", 1, "베스트하임"),
+    "260911_제이와이컴퍼니_거래명세서_베스트하임.xlsx",
+  );
 });
 
 async function startServer() {
@@ -168,8 +173,8 @@ async function confirmOrder(port, orderId, settings) {
   return confirmed.json.data;
 }
 
-async function generate(port, orderId) {
-  const result = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+async function generate(port, orderId, extra = {}) {
+  const result = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port, extra));
   if (result.json?.data?.document?.stored_file_name) {
     created.invoiceFiles.push(result.json.data.document.stored_file_name);
   }
@@ -216,7 +221,7 @@ test("phase 6B invoice generation", async (t) => {
     assert.equal(createdInvoice.status, 201, JSON.stringify(createdInvoice.json));
     assert.equal(createdInvoice.json.data.document.version, 1);
     assert.equal(createdInvoice.json.data.document.status, "GENERATED");
-    assert.equal(createdInvoice.json.data.document.original_file_name, "260907_아람유통_거래명세서.xlsx");
+    assert.equal(createdInvoice.json.data.document.original_file_name, "260907_아람유통_거래명세서_에쎄르.xlsx");
   });
 
   await t.test("TEST 2 DRAFT order cannot generate", async () => {
@@ -256,8 +261,9 @@ test("phase 6B invoice generation", async (t) => {
       columnMap: { external_product_name: "상품명", quantity: "수량" },
     });
     await confirmOrder(port, orderId, { shipping_type: "FREE", shipping_calculation_mode: "TOTAL_QUANTITY" });
+    const esserId = await esserSupplierId(port);
     await assert.rejects(
-      () => generateInvoice(orderId, { expectedTemplateHash: "00".repeat(32) }),
+      () => generateInvoice(orderId, { supplier_profile_id: esserId }, { expectedTemplateHash: "00".repeat(32) }),
       (err) => err.code === "INVOICE_MASTER_INTEGRITY_FAILED",
     );
   });
@@ -271,8 +277,9 @@ test("phase 6B invoice generation", async (t) => {
       columnMap: { external_product_name: "상품명", quantity: "수량" },
     });
     await confirmOrder(port, orderId, { shipping_type: "FREE", shipping_calculation_mode: "TOTAL_QUANTITY" });
+    const esserId = await esserSupplierId(port);
     await assert.rejects(
-      () => generateInvoice(orderId, { masterPath: path.join(os.tmpdir(), "missing-invoice-master.xlsx") }),
+      () => generateInvoice(orderId, { supplier_profile_id: esserId }, { masterPath: path.join(os.tmpdir(), "missing-invoice-master.xlsx") }),
       (err) => err.code === "INVOICE_MASTER_NOT_FOUND",
     );
   });
@@ -575,10 +582,10 @@ test("phase 6B invoice generation", async (t) => {
     const v2 = await api(port, "GET", `/api/orders/${confirmedThree}/invoices/${listed.json.data.documents[1].id}/download`);
     assert.equal(v1.status, 200);
     assert.equal(v2.status, 200);
-    assert.match(v1.headers.get("content-disposition") || "", /260907_%EC%95%84%EB%9E%8C%EC%9C%A0%ED%86%B5_%EA%B1%B0%EB%9E%98%EB%AA%85%EC%84%B8%EC%84%9C\.xlsx/);
-    assert.match(v2.headers.get("content-disposition") || "", /260907_%EC%95%84%EB%9E%8C%EC%9C%A0%ED%86%B5_%EA%B1%B0%EB%9E%98%EB%AA%85%EC%84%B8%EC%84%9C_v2\.xlsx/);
-    assert.equal(listed.json.data.documents[0].original_file_name, "260907_아람유통_거래명세서.xlsx");
-    assert.equal(listed.json.data.documents[1].original_file_name, "260907_아람유통_거래명세서_v2.xlsx");
+    assert.match(v1.headers.get("content-disposition") || "", /260907_%EC%95%84%EB%9E%8C%EC%9C%A0%ED%86%B5_%EA%B1%B0%EB%9E%98%EB%AA%85%EC%84%B8%EC%84%9C_%EC%97%90%EC%8E%84%EB%A5%B4\.xlsx/);
+    assert.match(v2.headers.get("content-disposition") || "", /260907_%EC%95%84%EB%9E%8C%EC%9C%A0%ED%86%B5_%EA%B1%B0%EB%9E%98%EB%AA%85%EC%84%B8%EC%84%9C_%EC%97%90%EC%8E%84%EB%A5%B4_v2\.xlsx/);
+    assert.equal(listed.json.data.documents[0].original_file_name, "260907_아람유통_거래명세서_에쎄르.xlsx");
+    assert.equal(listed.json.data.documents[1].original_file_name, "260907_아람유통_거래명세서_에쎄르_v2.xlsx");
     assert.ok(v1.buffer.length > 0);
     assert.ok(fs.existsSync(resolveInvoiceStoredPath(listed.json.data.documents[0].stored_file_name)));
     assert.ok(fs.existsSync(resolveInvoiceStoredPath(listed.json.data.documents[1].stored_file_name)));

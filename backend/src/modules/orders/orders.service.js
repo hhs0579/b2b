@@ -30,6 +30,7 @@ import * as clientPricesRepository from "../client-prices/client-prices.reposito
 import * as ordersRepository from "./orders.repository.js";
 import { insertInitialSettlement, listPayments } from "../settlements/settlements.repository.js";
 import * as invoicesRepository from "../invoices/invoices.repository.js";
+import { requireActiveProfile } from "../invoice-suppliers/invoice-suppliers.service.js";
 import { insertAuditLog } from "../audit/audit.repository.js";
 import { orderImpact } from "../deletions/impact.repository.js";
 import { deleteOrderUploadAfterCommit } from "../../utils/storage-cleanup.js";
@@ -327,6 +328,23 @@ export async function updateSettings(orderIdParam, body) {
     shipping_config: shippingConfig,
   });
   return loadLivePreview(updated);
+}
+
+export async function updateInvoiceSupplier(orderIdParam, body = {}) {
+  const order = await ordersRepository.getOrderById(parseId(orderIdParam));
+  if (!order) {
+    throw new AppError("ORDER_NOT_FOUND", "거래를 찾을 수 없습니다.", 404);
+  }
+  if (order.status === "CANCELLED") {
+    throw new AppError("ORDER_CANCELLED", "취소된 거래의 공급자는 변경할 수 없습니다.", 400);
+  }
+  const profileId = parseId(body.supplier_profile_id ?? body.supplierProfileId, "INVOICE_SUPPLIER_REQUIRED");
+  const profile = await requireActiveProfile(profileId);
+  const updated = await ordersRepository.updateInvoiceSupplier(order.id, profile.id);
+  return {
+    order: updated,
+    invoice_supplier: profile,
+  };
 }
 
 export async function updateInvoiceMemo(orderIdParam, body = {}) {

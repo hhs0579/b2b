@@ -17,6 +17,10 @@ export async function updateSettings(req, res) {
   sendData(res, await ordersService.updateSettings(req.params.id, req.body));
 }
 
+export async function updateInvoiceSupplier(req, res) {
+  sendData(res, await ordersService.updateInvoiceSupplier(req.params.id, req.body || {}));
+}
+
 export async function updateInvoiceMemo(req, res) {
   sendData(res, await ordersService.updateInvoiceMemo(req.params.id, req.body));
 }

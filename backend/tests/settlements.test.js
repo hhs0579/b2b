@@ -12,6 +12,7 @@ import { inspectInvoiceWorkbook } from "../src/domain/invoice-openxml.js";
 import { recalcSettlement } from "../src/domain/settlement.js";
 import { todayKst } from "../src/domain/dates.js";
 import { AppError } from "../src/utils/app-error.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P7${Date.now()}`;
 const created = {
@@ -298,10 +299,10 @@ test("phase 7 ledger settlements dashboard", async (t) => {
     assert.equal(detail.json.data.items[0].sale_price, 100000);
     assert.equal(detail.json.data.items[0].purchase_price, 40000);
 
-    const invoice = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const invoice = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(invoice.status, 201, JSON.stringify(invoice.json));
     created.invoiceFiles.push(invoice.json.data.document.stored_file_name);
-    const v2 = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const v2 = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(v2.status, 201, JSON.stringify(v2.json));
     created.invoiceFiles.push(v2.json.data.document.stored_file_name);
     const listed = await api(port, "GET", `/api/orders/${orderId}/invoices`);

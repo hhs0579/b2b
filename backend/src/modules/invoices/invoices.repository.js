@@ -14,6 +14,12 @@ function mapDocument(row) {
     template_hash: row.template_hash,
     status: row.status,
     invoice_metadata_snapshot: row.invoice_metadata_snapshot ?? null,
+    supplier_profile_id: row.supplier_profile_id != null ? toPublicId(row.supplier_profile_id) : null,
+    supplier_code_snapshot: row.supplier_code_snapshot ?? null,
+    supplier_name_snapshot: row.supplier_name_snapshot ?? null,
+    supplier_profile_snapshot: row.supplier_profile_snapshot ?? null,
+    template_code: row.template_code ?? null,
+    stamp_hash: row.stamp_hash ?? null,
     created_at: row.created_at,
   };
 }
@@ -54,9 +60,11 @@ export async function insertGenerated(input, db = pool) {
     `
       INSERT INTO generated_documents (
         order_id, document_type, version, original_file_name, stored_file_name,
-        file_hash, file_size, template_hash, status, invoice_metadata_snapshot
+        file_hash, file_size, template_hash, status, invoice_metadata_snapshot,
+        supplier_profile_id, supplier_code_snapshot, supplier_name_snapshot,
+        supplier_profile_snapshot, template_code, stamp_hash
       )
-      VALUES ($1,'INVOICE',$2,$3,$4,$5,$6,$7,'GENERATED',$8)
+      VALUES ($1,'INVOICE',$2,$3,$4,$5,$6,$7,'GENERATED',$8,$9,$10,$11,$12::jsonb,$13,$14)
       RETURNING *
     `,
     [
@@ -68,6 +76,12 @@ export async function insertGenerated(input, db = pool) {
       input.file_size,
       input.template_hash,
       input.invoice_metadata_snapshot ?? null,
+      input.supplier_profile_id ?? null,
+      input.supplier_code_snapshot ?? null,
+      input.supplier_name_snapshot ?? null,
+      input.supplier_profile_snapshot ? JSON.stringify(input.supplier_profile_snapshot) : null,
+      input.template_code ?? null,
+      input.stamp_hash ?? null,
     ],
   );
   return mapDocument(rows[0]);

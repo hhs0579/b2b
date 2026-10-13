@@ -1,0 +1,26 @@
+{
+  "file": "invoice_BESTHEIM_MASTER.xlsx",
+  "templateCode": "BESTHEIM",
+  "sha256": "fc72662c79908fe505e6157766f326a8af60b045901fcc46dedd0b14b4f64027",
+  "bytes": 102457,
+  "sheetName": "2021-12-28",
+  "printArea": "'2021-12-28'!$A$1:$O$19",
+  "mergeCount": 66,
+  "stampMediaPart": "xl/media/image2.png",
+  "stampSha256": "d61cb0f12deb3d4a4f246c00608951d3b1b4879dbbe3eecc34158b2f6e59626e",
+  "frozenPartSha256": {
+    "xl/styles.xml": "e8b55caee0e231932d1586ce298b5e77b6891200eda89f4d7b14798c4b3b322c",
+    "xl/theme/theme1.xml": "3eaa3e4e13dbc83fe3423d4fc08983871ca163fddb6b285320a8e76de5b09429",
+    "xl/drawings/drawing1.xml": "617032d63861846c81898693af7dd12956a13c3e3f74b6704a3b6e3a53fb6c6a",
+    "xl/drawings/_rels/drawing1.xml.rels": "3da172644a89abe8e69a58142ed25e67383fae99a7178fb954f5b1d02d6f7cd6",
+    "xl/media/image1.jpeg": "5ceb78cd86c20717d40410ea72f8b84b8806d165d1ab9adc26437e873e4d3128",
+    "xl/media/image2.png": "d61cb0f12deb3d4a4f246c00608951d3b1b4879dbbe3eecc34158b2f6e59626e",
+    "xl/workbook.xml": "3701a2e1cb6d751e257efd8ea1358a750f0822d641fcc1d49a61b036e1a50983",
+    "xl/worksheets/_rels/sheet1.xml.rels": "046f319d2b01bf9529da901ae33cb1cf8c7c7d06395167875fa0c4add6bf34c3"
+  },
+  "createdBy": "openxml-cell-clear+original-png-stamp",
+  "sourceFile": "260911_제이와이컴퍼니_거래명세서(베스트하임).xlsx",
+  "sourceSha256": "b92f43c7b4eb9da133c6f84080589c7d50442c6188f1c5c01cd33534231844fa",
+  "stampSourceFile": "베스트하임인감.png",
+  "stampSourceSha256": "d61cb0f12deb3d4a4f246c00608951d3b1b4879dbbe3eecc34158b2f6e59626e"
+}

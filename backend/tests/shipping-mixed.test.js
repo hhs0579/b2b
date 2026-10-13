@@ -10,6 +10,7 @@ import { xlsxBuffer } from "./helpers/xlsx-fixture.js";
 import { deleteProductsByIds, mapCreatedProduct } from "./helpers/product.js";
 import { inspectInvoiceWorkbook } from "../src/domain/invoice-openxml.js";
 import { groupIdentity } from "../src/domain/shipping-config.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `SM${Date.now()}`;
 const created = {
@@ -485,7 +486,7 @@ test("mixed shipping groups, truck grouping, and invoice notes", async (t) => {
       },
     });
     await confirm(port, orderId);
-    const generated = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const generated = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(generated.status, 201, JSON.stringify(generated.json));
     if (generated.json.data.document.stored_file_name) {
       created.invoiceFiles.push(generated.json.data.document.stored_file_name);

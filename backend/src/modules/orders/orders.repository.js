@@ -54,6 +54,7 @@ function mapOrder(row) {
     invoice_ship_date: toIsoDate(row.invoice_ship_date),
     invoice_destination: row.invoice_destination ?? null,
     invoice_manager: row.invoice_manager ?? null,
+    invoice_supplier_profile_id: row.invoice_supplier_profile_id != null ? toPublicId(row.invoice_supplier_profile_id) : null,
     confirmed_at: row.confirmed_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -70,6 +71,7 @@ const ORDER_COLUMNS = `
   o.invoice_product_line_count, o.invoice_shipping_line_count, o.invoice_required_line_count,
   o.preview_signature, o.invoice_note,
   o.invoice_shipping_method, o.invoice_ship_date, o.invoice_destination, o.invoice_manager,
+  o.invoice_supplier_profile_id,
   o.confirmed_at, o.created_at, o.updated_at
 `;
 
@@ -143,6 +145,19 @@ export async function updateSettings(id, patch, db = pool) {
       patch.manual_shipping_charge,
       JSON.stringify(patch.shipping_config || {}),
     ],
+  );
+  return rows[0] ? getOrderById(id, db) : null;
+}
+
+export async function updateInvoiceSupplier(id, supplierProfileId, db = pool) {
+  const { rows } = await db.query(
+    `
+      UPDATE orders
+      SET invoice_supplier_profile_id = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING id
+    `,
+    [id, supplierProfileId],
   );
   return rows[0] ? getOrderById(id, db) : null;
 }

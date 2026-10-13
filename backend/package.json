@@ -10,7 +10,7 @@
     "start": "node src/server.js",
     "db:migrate": "node src/db/migrate-cli.js",
     "invoice:master:build": "node scripts/build-invoice-master.js",
-    "test": "node --test --test-isolation=process tests/health.test.js tests/migrate.test.js tests/suppliers-products.test.js tests/sales-clients-prices.test.js tests/order-imports.test.js tests/carton.test.js tests/orders-calc.test.js tests/invoice-master.test.js tests/invoices.test.js tests/settlements.test.js tests/deletions.test.js tests/product-code-optional.test.js tests/product-options.test.js tests/order-import-quantity.test.js tests/invoice-expand.test.js tests/invoice-xml.test.js tests/invoice-memo.test.js tests/shipping-mixed.test.js tests/invoice-product-notes.test.js tests/excel-headers.test.js tests/excel-mapping.test.js tests/excel-multi-header.test.js"
+    "test": "node --test --test-isolation=process tests/health.test.js tests/migrate.test.js tests/suppliers-products.test.js tests/sales-clients-prices.test.js tests/order-imports.test.js tests/carton.test.js tests/orders-calc.test.js tests/invoice-master.test.js tests/invoices.test.js tests/invoice-suppliers.test.js tests/settlements.test.js tests/deletions.test.js tests/product-code-optional.test.js tests/product-options.test.js tests/order-import-quantity.test.js tests/invoice-expand.test.js tests/invoice-xml.test.js tests/invoice-memo.test.js tests/shipping-mixed.test.js tests/invoice-product-notes.test.js tests/excel-headers.test.js tests/excel-mapping.test.js tests/excel-multi-header.test.js"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",

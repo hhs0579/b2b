@@ -9,6 +9,7 @@ import orderImportsRoutes from "./modules/order-imports/order-imports.routes.js"
 import ordersRoutes from "./modules/orders/orders.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import maintenanceRoutes from "./modules/maintenance/maintenance.routes.js";
+import invoiceSuppliersRoutes from "./modules/invoice-suppliers/invoice-suppliers.routes.js";
 import { notFound } from "./middleware/not-found.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/api/sales-clients", salesClientsRoutes);
   app.use("/api/order-imports", orderImportsRoutes);
   app.use("/api/orders", ordersRoutes);
+  app.use("/api/invoice-suppliers", invoiceSuppliersRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/maintenance", maintenanceRoutes);
   app.use(notFound);

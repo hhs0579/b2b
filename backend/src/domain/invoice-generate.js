@@ -6,6 +6,7 @@ import {
   invoiceSheetLayout,
   writableCellsForLayout,
 } from "./invoice-template-map.js";
+import { INVOICE_TEMPLATES } from "./invoice-template-registry.js";
 import {
   inspectInvoiceWorkbook,
   loadOpenXmlZip,
@@ -32,10 +33,11 @@ export function sanitizeInvoiceFileName(name) {
     .replace(/[. ]+$/g, "") || "매출처";
 }
 
-export function invoiceDownloadFileName(orderDate, clientName, version) {
+export function invoiceDownloadFileName(orderDate, clientName, version, supplierName) {
   const iso = toIsoDate(orderDate) || "";
   const yymmdd = `${iso.slice(2, 4)}${iso.slice(5, 7)}${iso.slice(8, 10)}`;
-  const base = `${yymmdd}_${sanitizeInvoiceFileName(clientName)}_거래명세서`;
+  const supplier = supplierName ? `_${sanitizeInvoiceFileName(supplierName)}` : "";
+  const base = `${yymmdd}_${sanitizeInvoiceFileName(clientName)}_거래명세서${supplier}`;
   return version > 1 ? `${base}_v${version}.xlsx` : `${base}.xlsx`;
 }
 
@@ -88,16 +90,18 @@ export async function listPartHashes(buffer) {
   return hashes;
 }
 
-export async function verifyGeneratedInvoice(masterBytes, generatedBytes, fillPlan) {
+export async function verifyGeneratedInvoice(masterBytes, generatedBytes, fillPlan, template = INVOICE_TEMPLATES.ESSER) {
   const errors = [];
   const layout = fillPlan.layout || invoiceSheetLayout(0);
   const writable = writableCellsForLayout(layout);
   const expectedFormulas = formulaCellsForLayout(layout);
-  const master = await inspectInvoiceWorkbook(masterBytes);
-  const generated = await inspectInvoiceWorkbook(generatedBytes);
+  const inspectOptions = { stampMediaPart: template.stampMediaPart, frozenParts: template.frozenParts };
+  const master = await inspectInvoiceWorkbook(masterBytes, inspectOptions);
+  const generated = await inspectInvoiceWorkbook(generatedBytes, inspectOptions);
   const masterParts = await listPartHashes(masterBytes);
   const generatedParts = await listPartHashes(generatedBytes);
   const allowedDiffs = new Set(ALLOWED_PART_DIFFS);
+  const frozenParts = template.frozenParts || FROZEN_PARTS;
 
   for (const part of Object.keys({ ...masterParts, ...generatedParts })) {
     if (allowedDiffs.has(part)) {
@@ -108,7 +112,7 @@ export async function verifyGeneratedInvoice(masterBytes, generatedBytes, fillPl
     }
   }
 
-  for (const part of FROZEN_PARTS) {
+  for (const part of frozenParts) {
     if (part === "xl/workbook.xml") {
       continue;
     }

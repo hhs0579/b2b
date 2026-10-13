@@ -46,16 +46,26 @@ export function zeroFormulaCachedValue(sheetXml, ref) {
   });
 }
 
-export function clearSampleSharedStrings(sstXml) {
+export function clearSampleSharedStrings(sstXml, sampleIndexes = SAMPLE_SST_INDEXES) {
   const items = sstXml.match(/<si>[\s\S]*?<\/si>/g);
   if (!items) {
     return sstXml;
   }
   const next = items.map((item, index) =>
-    SAMPLE_SST_INDEXES.includes(index) ? "<si><t></t></si>" : item,
+    sampleIndexes.includes(index) ? "<si><t></t></si>" : item,
   );
   let cursor = 0;
   return sstXml.replace(/<si>[\s\S]*?<\/si>/g, () => next[cursor++]);
+}
+
+export function clearSampleSharedStringsByMarkers(sstXml, markers = []) {
+  if (!markers.length) {
+    return sstXml;
+  }
+  return sstXml.replace(/<si>[\s\S]*?<\/si>/g, (item) => {
+    const text = item.replace(/<[^>]+>/g, "");
+    return markers.some((marker) => text.includes(marker)) ? "<si><t></t></si>" : item;
+  });
 }
 
 export function assertPatchedSheetIntact(originalXml, patchedXml) {
@@ -103,7 +113,7 @@ export function patchInvoiceSheetXml(sheetXml) {
   return next;
 }
 
-export async function cleanInvoiceWorkbook(sourceBuffer) {
+export async function cleanInvoiceWorkbook(sourceBuffer, options = {}) {
   const zip = await JSZip.loadAsync(sourceBuffer);
   const sheetFile = zip.file("xl/worksheets/sheet1.xml");
   const sstFile = zip.file("xl/sharedStrings.xml");
@@ -114,7 +124,25 @@ export async function cleanInvoiceWorkbook(sourceBuffer) {
   const sheetXml = await sheetFile.async("string");
   const sstXml = await sstFile.async("string");
   zip.file("xl/worksheets/sheet1.xml", patchInvoiceSheetXml(sheetXml));
-  zip.file("xl/sharedStrings.xml", clearSampleSharedStrings(sstXml));
+  if (options.sampleMarkers?.length) {
+    zip.file("xl/sharedStrings.xml", clearSampleSharedStringsByMarkers(sstXml, options.sampleMarkers));
+  } else if (options.skipSampleSst) {
+    zip.file("xl/sharedStrings.xml", sstXml);
+  } else {
+    zip.file("xl/sharedStrings.xml", clearSampleSharedStrings(sstXml, options.sampleSstIndexes));
+  }
+  if (options.replaceMedia) {
+    for (const [part, bytes] of Object.entries(options.replaceMedia)) {
+      zip.file(part, bytes);
+    }
+  }
+  if (options.rewriteDrawingEmbeds) {
+    const drawingFile = zip.file("xl/drawings/drawing1.xml");
+    if (drawingFile) {
+      const drawingXml = await drawingFile.async("string");
+      zip.file("xl/drawings/drawing1.xml", drawingXml.replaceAll('r:embed="rId1"', `r:embed="${options.rewriteDrawingEmbeds}"`));
+    }
+  }
 
   return zip.generateAsync({
     type: "nodebuffer",

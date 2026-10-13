@@ -13,6 +13,13 @@ import {
   masterPath,
   sourceInvoicePath as defaultSourceInvoicePath,
 } from "./invoice-master-paths.js";
+import {
+  getInvoiceTemplate,
+  isAnyMasterPath,
+  listInvoiceTemplates,
+  templateManifestPath,
+  templateMasterPath,
+} from "./invoice-template-registry.js";
 import { frozenPartHashes, inspectInvoiceWorkbook, sha256 } from "./invoice-openxml.js";
 
 export const INVOICE_MASTER_CHECKSUM_KEY = "invoice_master_sha256";
@@ -38,13 +45,37 @@ export function getMasterManifestPath() {
 }
 
 export function isMasterPath(targetPath) {
-  return isSamePath(targetPath, getMasterPath());
+  return isSamePath(targetPath, getMasterPath()) || isAnyMasterPath(targetPath, env.STORAGE_ROOT);
 }
 
 export function assertNotMasterPath(targetPath) {
   if (isMasterPath(targetPath)) {
     throw new AppError("MASTER_READONLY", "MASTER 파일에는 쓸 수 없습니다.", 500);
   }
+}
+
+export function getTemplateMasterPath(code) {
+  return templateMasterPath(getInvoiceTemplate(code), env.STORAGE_ROOT);
+}
+
+export function getTemplateManifestPath(code) {
+  return templateManifestPath(getInvoiceTemplate(code), env.STORAGE_ROOT);
+}
+
+export function readTemplateMasterBytes(template) {
+  const dest = templateMasterPath(template, env.STORAGE_ROOT);
+  if (!fs.existsSync(dest)) {
+    throw new AppError("MASTER_MISSING", `${template.displayName} 거래명세서 MASTER 파일이 없습니다.`, 500);
+  }
+  return Buffer.from(fs.readFileSync(dest));
+}
+
+export function readTemplateManifest(template) {
+  const manifestPath = templateManifestPath(template, env.STORAGE_ROOT);
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 }
 
 export function readMasterRawBytes() {
@@ -77,28 +108,30 @@ export function computeMasterChecksum(bytes = readMasterRawBytes()) {
   return sha256(bytes);
 }
 
-export function inspectMasterStatus() {
-  const masterPath = getMasterPath();
-  const manifest = readMasterManifest();
-  if (!fs.existsSync(masterPath)) {
+export function inspectTemplateMasterStatus(template) {
+  const dest = templateMasterPath(template, env.STORAGE_ROOT);
+  const manifest = readTemplateManifest(template);
+  if (!fs.existsSync(dest)) {
     return {
       ok: false,
       code: "MASTER_MISSING",
-      message: "거래명세서 MASTER 파일이 없습니다.",
-      path: masterPath,
+      message: `${template.displayName} 거래명세서 MASTER 파일이 없습니다.`,
+      path: dest,
+      templateCode: template.code,
       expectedSha256: manifest?.sha256 ?? null,
     };
   }
 
-  const bytes = readMasterRawBytes();
+  const bytes = Buffer.from(fs.readFileSync(dest));
   const actualSha256 = sha256(bytes);
   const expectedSha256 = manifest?.sha256 ?? null;
   if (expectedSha256 && actualSha256 !== expectedSha256) {
     return {
       ok: false,
       code: "MASTER_CHECKSUM_MISMATCH",
-      message: "거래명세서 MASTER checksum이 기록값과 다릅니다. MASTER는 자동 수정하지 않습니다.",
-      path: masterPath,
+      message: `${template.displayName} 거래명세서 MASTER checksum이 기록값과 다릅니다. MASTER는 자동 수정하지 않습니다.`,
+      path: dest,
+      templateCode: template.code,
       expectedSha256,
       actualSha256,
     };
@@ -107,21 +140,28 @@ export function inspectMasterStatus() {
   return {
     ok: true,
     code: "MASTER_OK",
-    message: "거래명세서 MASTER 읽기 전용 확인",
-    path: masterPath,
+    message: `${template.displayName} 거래명세서 MASTER 읽기 전용 확인`,
+    path: dest,
+    templateCode: template.code,
     sha256: actualSha256,
     bytes: bytes.length,
   };
 }
 
+export function inspectMasterStatus() {
+  return inspectTemplateMasterStatus(getInvoiceTemplate("ESSER"));
+}
+
 export function warnInvoiceMasterStatus() {
-  const status = inspectMasterStatus();
-  if (status.ok) {
-    logger.info(`Invoice MASTER ok sha256=${status.sha256}`);
-    return status;
+  const statuses = listInvoiceTemplates().map((template) => inspectTemplateMasterStatus(template));
+  for (const status of statuses) {
+    if (status.ok) {
+      logger.info(`Invoice MASTER ${status.templateCode} ok sha256=${status.sha256}`);
+    } else {
+      logger.warn(`${status.templateCode} ${status.code}: ${status.message}`);
+    }
   }
-  logger.warn(`${status.code}: ${status.message}`);
-  return status;
+  return statuses.find((item) => item.templateCode === "ESSER") || statuses[0];
 }
 
 export async function syncInvoiceMasterChecksum() {

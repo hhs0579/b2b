@@ -6,6 +6,7 @@ import { formatDateTimeKst, formatWon } from "../utils/format";
 import { ORDER_STATUS_LABELS, SHIPPING_CALC_LABELS, SHIPPING_LABELS } from "../utils/labels";
 import { confirmHardDelete } from "../utils/confirm-delete";
 import InvoiceMemoPanel from "../components/InvoiceMemoPanel.vue";
+import InvoiceSupplierPanel from "../components/InvoiceSupplierPanel.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -16,6 +17,7 @@ const confirming = ref(false);
 const invoices = ref([]);
 const generating = ref(false);
 const memoPanel = ref(null);
+const supplierProfileId = ref("");
 const splitQty = reactive({});
 const groupNoteDraft = reactive({});
 const form = reactive({
@@ -90,6 +92,7 @@ async function load() {
     if (preview.order.status === "CONFIRMED") {
       const listed = await apiRequest("GET", `/orders/${route.params.id}/invoices`);
       invoices.value = listed.documents || [];
+      supplierProfileId.value = listed.order?.invoice_supplier_profile_id || supplierProfileId.value;
     } else {
       invoices.value = [];
     }
@@ -265,6 +268,7 @@ async function confirm() {
     });
     const listed = await apiRequest("GET", `/orders/${route.params.id}/invoices`);
     invoices.value = listed.documents || [];
+    supplierProfileId.value = listed.order?.invoice_supplier_profile_id || supplierProfileId.value;
   } catch (err) {
     error.value = err.message;
     if (err.code === "ORDER_PREVIEW_CHANGED") {
@@ -295,14 +299,21 @@ function onMemoError(err) {
 
 async function generateInvoice() {
   error.value = "";
+  if (!supplierProfileId.value) {
+    error.value = "거래명세서 공급자를 선택해주세요.";
+    return;
+  }
   generating.value = true;
   try {
     if (memoPanel.value) {
       await memoPanel.value.save();
     }
-    await apiRequest("POST", `/orders/${route.params.id}/invoices`);
+    await apiRequest("POST", `/orders/${route.params.id}/invoices`, {
+      supplier_profile_id: Number(supplierProfileId.value),
+    });
     const listed = await apiRequest("GET", `/orders/${route.params.id}/invoices`);
     invoices.value = listed.documents || [];
+    supplierProfileId.value = listed.order?.invoice_supplier_profile_id || supplierProfileId.value;
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -575,6 +586,8 @@ onMounted(load);
           @error="onMemoError"
         />
         <h3>거래명세서</h3>
+        <InvoiceSupplierPanel v-model="supplierProfileId" @error="onMemoError" />
+        <p v-if="!supplierProfileId" class="error">거래명세서 공급자를 선택해주세요.</p>
         <div class="form-actions">
           <button type="button" :disabled="generating" @click="generateInvoice">
             {{ invoices.length ? "새 버전 생성" : "거래명세서 생성" }}
@@ -583,12 +596,13 @@ onMounted(load);
         <table v-if="invoices.length" class="data-table">
           <thead>
             <tr>
-              <th>버전</th><th>상태</th><th>파일명</th><th>생성일</th><th>MASTER checksum</th><th>다운로드</th>
+              <th>버전</th><th>공급자</th><th>상태</th><th>파일명</th><th>생성일</th><th>MASTER checksum</th><th>다운로드</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="doc in invoices" :key="doc.id">
               <td>v{{ doc.version }}</td>
+              <td>{{ doc.supplier_name_snapshot || "—" }}</td>
               <td>{{ doc.status === "GENERATED" ? "정상" : "사용 불가" }}</td>
               <td>{{ doc.original_file_name }}</td>
               <td>{{ formatDateTimeKst(doc.created_at) }}</td>

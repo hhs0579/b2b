@@ -8,6 +8,7 @@ import { resolveStoredFilePath } from "../src/utils/order-files.js";
 import { resolveInvoiceStoredPath } from "../src/utils/invoice-files.js";
 import { xlsxBuffer } from "./helpers/xlsx-fixture.js";
 import { deleteProductsByIds, mapCreatedProduct } from "./helpers/product.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P10${Date.now()}`;
 const created = {
@@ -204,7 +205,7 @@ test("product_code is optional across register, alias, confirm, invoice", async 
   });
 
   await t.test("5. 상품코드 없이 거래명세서 생성 성공", async () => {
-    const result = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const result = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(result.status, 201, JSON.stringify(result.json));
     assert.equal(result.json.data.document.status, "GENERATED");
     if (result.json.data.document.stored_file_name) {

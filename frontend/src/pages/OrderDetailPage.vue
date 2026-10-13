@@ -109,7 +109,13 @@
         @error="onMemoError"
       />
 
-      <h2>거래명세서 버전</h2>
+      <h2>거래명세서</h2>
+      <InvoiceSupplierPanel
+        v-model="supplierProfileId"
+        :readonly="order.status !== 'CONFIRMED'"
+        @error="onMemoError"
+      />
+      <p v-if="!supplierProfileId && order.status === 'CONFIRMED'" class="error">거래명세서 공급자를 선택해주세요.</p>
       <div class="form-actions">
         <button type="button" :disabled="generating || order.status !== 'CONFIRMED'" @click="generateInvoice">
           {{ documents.length ? "새 버전 생성" : "거래명세서 생성" }}
@@ -118,22 +124,24 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>버전</th><th>상태</th><th>파일명</th><th>생성일</th><th></th>
+            <th>버전</th><th>공급자</th><th>상태</th><th>파일명</th><th>생성일</th><th>MASTER checksum</th><th></th>
           </tr>
         </thead>
         <tbody>
             <tr v-for="doc in documents" :key="doc.id">
             <td>v{{ doc.version }}</td>
+            <td>{{ doc.supplier_name_snapshot || "—" }}</td>
             <td>{{ doc.status === "GENERATED" ? "정상" : "사용 불가" }}</td>
             <td>{{ doc.original_file_name }}</td>
             <td>{{ formatDateTimeKst(doc.created_at) }}</td>
+            <td>{{ doc.template_hash }}</td>
             <td>
               <button v-if="doc.status === 'GENERATED'" type="button" @click="downloadInvoice(doc)">다운로드</button>
               <span v-else>제공하지 않음</span>
             </td>
           </tr>
           <tr v-if="documents.length === 0">
-            <td colspan="5">생성된 거래명세서가 없습니다.</td>
+            <td colspan="7">생성된 거래명세서가 없습니다.</td>
           </tr>
         </tbody>
       </table>
@@ -234,6 +242,7 @@ import { apiDownload, apiRequest } from "../api/client";
 import { formatDateTimeKst, formatWon } from "../utils/format";
 import { PAYMENT_STATUS_LABELS, TAX_INVOICE_LABELS } from "../utils/labels";
 import InvoiceMemoPanel from "../components/InvoiceMemoPanel.vue";
+import InvoiceSupplierPanel from "../components/InvoiceSupplierPanel.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -241,6 +250,7 @@ const loading = ref(false);
 const error = ref("");
 const generating = ref(false);
 const memoPanel = ref(null);
+const supplierProfileId = ref("");
 const savingPayment = ref(false);
 const detail = ref(null);
 const settlementForm = reactive({
@@ -277,6 +287,7 @@ async function load() {
   try {
     detail.value = await apiRequest("GET", `/orders/${route.params.id}`);
     applySettlementForm(detail.value.settlement);
+    supplierProfileId.value = detail.value.order?.invoice_supplier_profile_id || "";
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -362,12 +373,21 @@ function onMemoError(err) {
 
 async function generateInvoice() {
   error.value = "";
+  if (!supplierProfileId.value) {
+    error.value = "거래명세서 공급자를 선택해주세요.";
+    return;
+  }
   generating.value = true;
   try {
     if (memoPanel.value) {
       await memoPanel.value.save();
     }
-    await apiRequest("POST", `/orders/${route.params.id}/invoices`);
+    await apiRequest("PATCH", `/orders/${route.params.id}/invoice-supplier`, {
+      supplier_profile_id: Number(supplierProfileId.value),
+    });
+    await apiRequest("POST", `/orders/${route.params.id}/invoices`, {
+      supplier_profile_id: Number(supplierProfileId.value),
+    });
     await load();
   } catch (err) {
     error.value = err.message;

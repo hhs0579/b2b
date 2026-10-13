@@ -9,6 +9,7 @@ import { resolveInvoiceStoredPath } from "../src/utils/invoice-files.js";
 import { xlsxBuffer } from "./helpers/xlsx-fixture.js";
 import { deleteProductsByIds, mapCreatedProduct } from "./helpers/product.js";
 import { listAuditLogs } from "../src/modules/audit/audit.repository.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P12${Date.now()}`;
 const created = {
@@ -330,7 +331,7 @@ test("manual quantity override on order import preview", async (t) => {
 
   await t.test("TEST 12 기존 거래명세서 회귀", async () => {
     const orderId = created.orderIds[created.orderIds.length - 1];
-    const result = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const result = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(result.status, 201, JSON.stringify(result.json));
     assert.equal(result.json.data.document.status, "GENERATED");
     if (result.json.data.document.stored_file_name) {

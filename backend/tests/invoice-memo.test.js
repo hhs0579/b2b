@@ -12,6 +12,7 @@ import { inspectInvoiceWorkbook, sha256 } from "../src/domain/invoice-openxml.js
 import { STAMP_IMAGE_SHA256 } from "../src/domain/invoice-template-map.js";
 import { formatInvoiceNoteText, formatInvoiceShipDate, formatProductParcelNote } from "../src/domain/invoice-note.js";
 import { getMasterPath } from "../src/domain/invoice-master.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P14${Date.now()}`;
 const created = {
@@ -169,7 +170,7 @@ test("invoice memo fields and shipping notes are written into generated XLSX", a
   }
 
   async function generateAndInspect(orderId) {
-    const generated = await api(port, "POST", `/api/orders/${orderId}/invoices`);
+    const generated = await api(port, "POST", `/api/orders/${orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(generated.status, 201, JSON.stringify(generated.json));
     if (generated.json.data.document.stored_file_name) {
       created.invoiceFiles.push(generated.json.data.document.stored_file_name);

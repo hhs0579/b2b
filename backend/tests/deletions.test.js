@@ -11,6 +11,7 @@ import { sha256 } from "../src/domain/invoice-openxml.js";
 import { todayKst } from "../src/domain/dates.js";
 import { listAuditLogs } from "../src/modules/audit/audit.repository.js";
 import { deleteProductsByIds, mapCreatedProduct } from "./helpers/product.js";
+import { esserInvoiceBody } from "./helpers/invoice-supplier.js";
 
 const prefix = `P8${Date.now()}`;
 const created = {
@@ -265,7 +266,7 @@ test("phase 8 safe deletions", async (t) => {
 
   let invoiceHash;
   await t.test("TEST 11 CONFIRMED cancel keeps snapshot and invoice", async () => {
-    const invoice = await api(port, "POST", `/api/orders/${confirmed.orderId}/invoices`);
+    const invoice = await api(port, "POST", `/api/orders/${confirmed.orderId}/invoices`, await esserInvoiceBody(port));
     assert.equal(invoice.status, 201, JSON.stringify(invoice.json));
     created.invoiceFiles.push(invoice.json.data.document.stored_file_name);
     const filePath = resolveInvoiceStoredPath(invoice.json.data.document.stored_file_name);

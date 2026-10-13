@@ -21,7 +21,10 @@ import {
 
 export function collectIntegrityFindings(inspect, options = {}) {
   const findings = [];
-  const { sourceInspect, beforeSha256, afterSha256 } = options;
+  const { sourceInspect, beforeSha256, afterSha256, template } = options;
+  const expectedImageSha = template?.stampSha256 || STAMP_IMAGE_SHA256;
+  const stampMediaPart = template?.stampMediaPart || STAMP_MEDIA_PART;
+  const stampEmbedId = template?.stampEmbedId || "rId1";
 
   if (inspect.sheetName !== INVOICE_SHEET_NAME) {
     findings.push({
@@ -57,14 +60,15 @@ export function collectIntegrityFindings(inspect, options = {}) {
   findings.push({
     id: "TEST_4",
     ok: Boolean(inspect.media.exists),
-    message: inspect.media.exists ? `${STAMP_MEDIA_PART} 존재` : "image1.jpeg 없음",
+    message: inspect.media.exists ? `${stampMediaPart} 존재` : `${stampMediaPart} 없음`,
   });
 
-  const expectedImageSha = STAMP_IMAGE_SHA256;
   const imageShaOk =
     Boolean(inspect.media.sha256) &&
     inspect.media.sha256 === expectedImageSha &&
-    (!sourceInspect || sourceInspect.media.sha256 === expectedImageSha);
+    (!sourceInspect ||
+      options.requireSourceStampMatch === false ||
+      sourceInspect.media.sha256 === expectedImageSha);
   findings.push({
     id: "TEST_5",
     ok: imageShaOk,
@@ -73,19 +77,20 @@ export function collectIntegrityFindings(inspect, options = {}) {
       : "image1.jpeg checksum 불일치",
   });
 
+  const stampTarget = `../media/${stampMediaPart.split("/").pop()}`;
   const drawingRel = inspect.drawingRels.find(
-    (rel) => rel.target === "../media/image1.jpeg" && rel.type.includes("/image"),
+    (rel) => rel.target === stampTarget && rel.type.includes("/image"),
   );
   const drawingRelOk = Boolean(drawingRel);
   findings.push({
     id: "TEST_6",
     ok: drawingRelOk,
-    message: drawingRelOk ? "drawing → image1.jpeg 관계 유지" : "drawing rel 없음",
+    message: drawingRelOk ? `drawing → ${stampTarget} 관계 유지` : "drawing rel 없음",
   });
 
   const stampOk =
     inspect.drawing?.picCount === 2 &&
-    inspect.drawing.embeds.every((embed) => embed === "rId1") &&
+    inspect.drawing.embeds.every((embed) => embed === stampEmbedId) &&
     Boolean(drawingRel);
   findings.push({
     id: "TEST_7",

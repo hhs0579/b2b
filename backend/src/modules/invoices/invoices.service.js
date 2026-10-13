@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import XLSX from "xlsx";
 import { AppError } from "../../utils/app-error.js";
-import { parseId } from "../../utils/validation.js";
+import { optionalDate, optionalText, parseId } from "../../utils/validation.js";
 import { excelSerialFromIsoDate, parseIsoDateParts } from "../../domain/dates.js";
 import { projectInvoiceLines } from "../../domain/invoice-projection.js";
 import {
@@ -20,9 +20,15 @@ import { inspectInvoiceWorkbook, sha256 } from "../../domain/invoice-openxml.js"
 import { buildInvoiceFillPlan, patchInvoiceWorkbook } from "../../domain/invoice-openxml-patch.js";
 import { invoiceDownloadFileName, verifyGeneratedInvoice } from "../../domain/invoice-generate.js";
 import { inspectGeneratedWithLibreOffice } from "../../domain/invoice-libreoffice.js";
-import { getMasterPath, readMasterManifest } from "../../domain/invoice-master.js";
+import {
+  readTemplateManifest,
+  readTemplateMasterBytes,
+} from "../../domain/invoice-master.js";
+import { getInvoiceTemplate } from "../../domain/invoice-template-registry.js";
 import * as ordersRepository from "../orders/orders.repository.js";
 import * as invoicesRepository from "./invoices.repository.js";
+import * as invoiceSuppliersRepository from "../invoice-suppliers/invoice-suppliers.repository.js";
+import { requireActiveProfile } from "../invoice-suppliers/invoice-suppliers.service.js";
 import {
   contentDisposition,
   deleteInvoiceOutput,
@@ -33,22 +39,29 @@ import {
 } from "../../utils/invoice-files.js";
 
 export function assertMasterReady(options = {}) {
-  const masterPath = options.masterPath || getMasterPath();
-  if (!fs.existsSync(masterPath)) {
-    throw new AppError("INVOICE_MASTER_NOT_FOUND", "거래명세서 MASTER 파일이 없습니다.", 500);
+  const template = options.template || getInvoiceTemplate("ESSER");
+  if (options.masterPath && !options.masterBytes && !fs.existsSync(options.masterPath)) {
+    throw new AppError(
+      "INVOICE_MASTER_NOT_FOUND",
+      `${template.displayName} 거래명세서 MASTER 파일이 없습니다.`,
+      500,
+    );
   }
-  const bytes = Buffer.from(options.masterBytes || fs.readFileSync(masterPath));
+  const bytes = Buffer.from(
+    options.masterBytes ||
+      (options.masterPath ? fs.readFileSync(options.masterPath) : readTemplateMasterBytes(template)),
+  );
   const actual = sha256(bytes);
-  const expected = options.expectedTemplateHash || readMasterManifest()?.sha256;
+  const expected = options.expectedTemplateHash || readTemplateManifest(template)?.sha256;
   if (!expected || actual !== expected) {
     throw new AppError(
       "INVOICE_MASTER_INTEGRITY_FAILED",
-      "거래명세서 MASTER checksum이 기록값과 다릅니다. MASTER는 자동 수정하지 않습니다.",
+      `${template.displayName} 거래명세서 MASTER checksum이 기록값과 다릅니다. MASTER는 자동 수정하지 않습니다.`,
       500,
-      { expectedSha256: expected || null, actualSha256: actual },
+      { expectedSha256: expected || null, actualSha256: actual, templateCode: template.code },
     );
   }
-  return { bytes, hash: actual, path: masterPath };
+  return { bytes, hash: actual, path: options.masterPath || null, template };
 }
 
 export function reopenGeneratedWorkbook(buffer) {
@@ -90,7 +103,16 @@ function projectionFromSnapshot(order, items, groups) {
   });
 }
 
-export async function generateInvoice(orderIdParam, options = {}) {
+function resolveSupplierProfileId(body = {}, order = {}) {
+  const raw = body.supplier_profile_id ?? body.supplierProfileId ?? order.invoice_supplier_profile_id;
+  if (raw == null || raw === "") {
+    throw new AppError("INVOICE_SUPPLIER_REQUIRED", "거래명세서 공급자를 선택해주세요.", 400);
+  }
+  return parseId(raw, "INVOICE_SUPPLIER_REQUIRED");
+}
+
+export async function generateInvoice(orderIdParam, body = {}, options = {}) {
+  const request = { ...body, ...options };
   const orderId = parseId(orderIdParam);
   const order = await ordersRepository.getOrderById(orderId);
   if (!order) {
@@ -100,6 +122,44 @@ export async function generateInvoice(orderIdParam, options = {}) {
     throw new AppError("ORDER_NOT_CONFIRMED", "확정된 거래만 거래명세서를 생성할 수 있습니다.", 400);
   }
 
+  const profile = await requireActiveProfile(resolveSupplierProfileId(request, order));
+  const template = getInvoiceTemplate(profile.template_code);
+  if (order.invoice_supplier_profile_id !== profile.id) {
+    await ordersRepository.updateInvoiceSupplier(order.id, profile.id);
+  }
+  const memoFields = {
+    shipping_method: optionalText(request.shippingMethod ?? request.shipping_method ?? request.invoice_shipping_method),
+    ship_date: optionalDate(
+      request.shipDate ?? request.ship_date ?? request.invoice_ship_date,
+      "INVALID_INVOICE_SHIP_DATE",
+      "출고일 형식이 YYYY-MM-DD 이어야 합니다.",
+    ),
+    destination: optionalText(request.destination ?? request.invoice_destination),
+    manager: optionalText(request.manager ?? request.invoice_manager),
+  };
+  if (memoFields.shipping_method || memoFields.ship_date || memoFields.destination || memoFields.manager) {
+    const current = resolvedInvoiceMemo(order);
+    const memo = {
+      shipping_method: memoFields.shipping_method ?? current.shipping_method,
+      ship_date: memoFields.ship_date ?? current.ship_date,
+      destination: memoFields.destination ?? current.destination,
+      manager: memoFields.manager ?? current.manager,
+    };
+    await ordersRepository.updateInvoiceMemo(order.id, {
+      invoice_shipping_method: memo.shipping_method,
+      invoice_ship_date: memo.ship_date,
+      invoice_destination: memo.destination,
+      invoice_manager: memo.manager,
+      invoice_note: formatInvoiceNoteText(memo),
+    });
+    Object.assign(order, {
+      invoice_shipping_method: memo.shipping_method,
+      invoice_ship_date: memo.ship_date,
+      invoice_destination: memo.destination,
+      invoice_manager: memo.manager,
+    });
+  }
+
   const items = await ordersRepository.listOrderItems(orderId);
   const groups = await ordersRepository.listShippingGroups(orderId);
   const projection = projectionFromSnapshot(order, items, groups);
@@ -107,8 +167,11 @@ export async function generateInvoice(orderIdParam, options = {}) {
   const note = formatInvoiceNoteText(memo);
   const metadataSnapshot = invoiceMemoSnapshot(memo);
 
-  const master = assertMasterReady(options);
-  const masterInspect = await inspectInvoiceWorkbook(master.bytes);
+  const master = assertMasterReady({ ...request, template });
+  const masterInspect = await inspectInvoiceWorkbook(master.bytes, {
+    stampMediaPart: template.stampMediaPart,
+    frozenParts: template.frozenParts,
+  });
   const fillPlan = buildInvoiceFillPlan({
     orderDateParts: parseIsoDateParts(order.order_date),
     dateSerial: excelSerialFromIsoDate(order.order_date),
@@ -129,7 +192,7 @@ export async function generateInvoice(orderIdParam, options = {}) {
     });
   }
 
-  const verification = await verifyGeneratedInvoice(master.bytes, generatedBytes, fillPlan);
+  const verification = await verifyGeneratedInvoice(master.bytes, generatedBytes, fillPlan, template);
   const storedFileName = newInvoiceStoredName();
 
   if (!verification.ok) {
@@ -160,7 +223,12 @@ export async function generateInvoice(orderIdParam, options = {}) {
   }
 
   const version = await invoicesRepository.nextVersion(orderId);
-  const originalFileName = invoiceDownloadFileName(order.order_date, invoiceClientName(order), version);
+  const originalFileName = invoiceDownloadFileName(
+    order.order_date,
+    invoiceClientName(order),
+    version,
+    profile.supplier_name,
+  );
   await writeInvoiceOutput(storedFileName, generatedBytes);
   try {
     const document = await invoicesRepository.insertGenerated({
@@ -172,6 +240,12 @@ export async function generateInvoice(orderIdParam, options = {}) {
       file_size: generatedBytes.length,
       template_hash: master.hash,
       invoice_metadata_snapshot: metadataSnapshot,
+      supplier_profile_id: profile.id,
+      supplier_code_snapshot: profile.supplier_code,
+      supplier_name_snapshot: profile.supplier_name,
+      supplier_profile_snapshot: invoiceSuppliersRepository.profileSnapshot(profile),
+      template_code: template.code,
+      stamp_hash: template.stampSha256,
     });
     return {
       document,
@@ -207,6 +281,7 @@ export async function listInvoices(orderIdParam) {
       client_name_snapshot: order.client_name_snapshot,
       order_date: order.order_date,
       shipping_type: order.shipping_type,
+      invoice_supplier_profile_id: order.invoice_supplier_profile_id,
     },
     projection,
     documents,
@@ -230,7 +305,12 @@ export async function downloadInvoice(orderIdParam, documentIdParam) {
     throw new AppError("INVOICE_INTEGRITY_FAILED", "저장된 거래명세서 checksum이 기록과 다릅니다.", 500);
   }
   const clientName = String(order.client_name_snapshot || order.client_name || "").trim() || "매출처";
-  const filename = invoiceDownloadFileName(order.order_date, clientName, document.version);
+  const filename = invoiceDownloadFileName(
+    order.order_date,
+    clientName,
+    document.version,
+    document.supplier_name_snapshot,
+  );
   return {
     bytes,
     filename,

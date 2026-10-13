@@ -5,6 +5,7 @@ import { logger } from "./logger.js";
 
 const REQUIRED_DIRECTORIES = [
   "masters",
+  path.join("masters", "stamps"),
   path.join("uploads", "orders"),
   path.join("generated", "invoices"),
 ];
